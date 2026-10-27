@@ -10,5 +10,8 @@ Offline web app hosted on GitHub Pages. This repository is PUBLIC.
 
 ## Files
 - `index.html`: the whole app (calendar, logging sheets, report, backup/restore)
-- `sw.js`: offline cache of app files only; bump `CACHE` when shipping changes
+- `sw.js`: offline cache of app files only
 - `manifest.webmanifest`, `icons/`: Home Screen install
+
+## Versioning
+On every update, bump `APP_VERSION` in `index.html` (shown at the bottom of the screen) and set `CACHE` in `sw.js` to `pain-diary-v<same version>`. History: 1.0 first release, 1.1 report area filter, 1.2 version label.

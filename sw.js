@@ -1,5 +1,5 @@
 // Offline support. Caches the app's own files only. Never sees or stores your entries.
-const CACHE = "pain-diary-v2";
+const CACHE = "pain-diary-v1.2";
 const FILES = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
