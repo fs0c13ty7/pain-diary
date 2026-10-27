@@ -1,0 +1,12 @@
+# Never commit backups, exports or any personal data. This repo is public.
+*.json
+*.csv
+*.txt
+*.pdf
+*.xlsx
+*.zip
+pain-diary-backup*
+backups/
+exports/
+data/
+.DS_Store

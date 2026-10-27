@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; form-action 'none'; base-uri 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
+<title>Pain Diary</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pain Diary">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F2F1F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111017" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<style>
+/* Layout: phone-first single column — segmented tabs, month calendar card, day log; bottom sheets for logging */
+:root{
+  --bg:#F2F1F7; --surface:#FFFFFF; --surface-2:#F7F6FB; --ink:#1B1A22; --muted:#6A6780; --line:#E2E0EB;
+  --accent:#5A4BDB; --accent-soft:#ECE9FF; --on-accent:#FFFFFF;
+  --p-low:#2F9E6E; --p-mid:#D99A1E; --p-high:#D9483E; --p-none:#B9B6C8;
+  --display:ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --body:system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --shadow:0 1px 2px rgba(30,25,60,.06), 0 6px 20px rgba(30,25,60,.06);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111017; --surface:#1C1A25; --surface-2:#24222F; --ink:#EEEDF5; --muted:#9D99B3; --line:#2F2C3C;
+  --accent:#9187FF; --accent-soft:#2A2550; --on-accent:#16131F;
+  --p-low:#46BD89; --p-mid:#E8B23F; --p-high:#F06A5F; --p-none:#5D5A70;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#111017; --surface:#1C1A25; --surface-2:#24222F; --ink:#EEEDF5; --muted:#9D99B3; --line:#2F2C3C;
+  --accent:#9187FF; --accent-soft:#2A2550; --on-accent:#16131F;
+  --p-low:#46BD89; --p-mid:#E8B23F; --p-high:#F06A5F; --p-none:#5D5A70;
+  --shadow:0 1px 2px rgba(0,0,0,.3); color-scheme:dark }
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 120px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+.top h1{font-size:26px;letter-spacing:-.01em}
+.seg{display:flex;background:var(--surface-2);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{border:0;background:none;padding:7px 14px;border-radius:999px;font-weight:600;font-size:14px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.note{font-size:13px;color:var(--muted);margin:0 0 12px}
+.statusbar{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--muted);margin:-4px 0 10px;padding:2px 2px 2px 4px;border-radius:12px}
+.statusbar .textbtn{font-size:14px}
+.statusbar.due{background:var(--accent-soft);color:var(--ink);padding:4px 4px 4px 12px;margin-top:0}
+.card{background:var(--surface);border-radius:20px;box-shadow:var(--shadow);padding:16px}
+/* calendar */
+.cal-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.cal-head h2{font-size:19px;flex:1}
+.iconbtn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--surface-2);display:grid;place-items:center}
+.iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.textbtn{border:0;background:none;color:var(--accent);font-weight:600;padding:6px 8px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.dow{font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--muted);padding:4px 0 6px}
+.day{position:relative;border:0;background:none;aspect-ratio:1/1.05;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-variant-numeric:tabular-nums;font-size:15px;min-width:0}
+.day.out{color:var(--muted);opacity:.45}
+.day.today .n{color:var(--accent);font-weight:700}
+.day[aria-selected="true"]{background:var(--accent-soft)}
+.day[aria-selected="true"] .n{font-weight:700}
+.dot{width:7px;height:7px;border-radius:50%;background:transparent}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+/* day log */
+.dayhead{display:flex;align-items:baseline;justify-content:space-between;margin:22px 4px 10px}
+.dayhead h2{font-size:20px}
+.dayhead small{color:var(--muted);font-size:13px}
+.entries{display:flex;flex-direction:column;gap:10px}
+.entry{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;text-align:left;border:0;width:100%;background:var(--surface);border-radius:16px;padding:14px;box-shadow:var(--shadow)}
+.score{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:20px;color:#fff;font-variant-numeric:tabular-nums}
+.score.na{background:var(--p-none);font-size:13px}
+.entry .meta{min-width:0}
+.entry .time{font-weight:700}
+.entry .line{color:var(--muted);font-size:13.5px;overflow-wrap:anywhere}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.chip{font-size:12.5px;background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:3px 9px}
+.empty{background:var(--surface);border:1.5px dashed var(--line);border-radius:16px;padding:22px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+/* fab */
+.fabbar{position:fixed;left:0;right:0;bottom:0;padding:12px max(16px,env(safe-area-inset-right,0px)) calc(14px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));background:linear-gradient(to top,var(--bg) 60%,transparent);display:flex;justify-content:center;z-index:5}
+.primary{border:0;background:var(--accent);color:var(--on-accent);font-weight:700;font-size:16px;border-radius:999px;padding:14px 26px;width:100%;max-width:528px;box-shadow:0 6px 18px rgba(90,75,219,.3)}
+.primary:disabled{opacity:.5}
+/* sheets */
+.scrim{position:fixed;inset:0;background:rgba(15,12,30,.45);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:560px;max-height:92%;border-radius:22px 22px 0 0;display:flex;flex-direction:column;animation:up .22s ease-out}
+@keyframes up{from{transform:translateY(30px);opacity:.6}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.sheet{animation:none}}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:14px max(16px,env(safe-area-inset-right,0px)) 10px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+.sheet-head h3{font-size:18px}
+.sheet-body{overflow-y:auto;padding:14px max(16px,env(safe-area-inset-right,0px)) 16px max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:18px}
+.sheet-foot{padding:10px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid var(--line);display:flex;gap:10px}
+.sheet-foot .primary{box-shadow:none}
+.label{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:0 4px 6px}
+.group{background:var(--surface);border-radius:16px;overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;text-align:left;padding:14px 16px;border-bottom:1px solid var(--line);min-height:52px}
+.row:last-child{border-bottom:0}
+.row .t{flex:1;font-weight:600}
+.row .v{color:var(--muted);font-size:14px;text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
+.row .plus{color:var(--accent);font-size:22px;line-height:1;font-weight:500}
+.row input{border:0;background:none;color:var(--ink);font:inherit;text-align:right;min-width:0}
+.painpad{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:12px}
+.painpad button{border:1.5px solid var(--line);background:var(--surface-2);border-radius:12px;height:46px;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums}
+.painpad button[aria-pressed="true"]{color:#fff;border-color:transparent}
+.paindesc{padding:0 16px 14px;color:var(--muted);font-size:13.5px;min-height:20px}
+textarea{width:100%;border:0;background:var(--surface);color:var(--ink);border-radius:16px;padding:14px 16px;font:inherit;min-height:110px;resize:vertical}
+.ghost{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:13px 18px;font-weight:600}
+.danger{color:var(--p-high)}
+/* options list */
+.opt{display:flex;align-items:center;justify-content:space-between;width:100%;border:0;background:none;padding:15px 16px;border-bottom:1px solid var(--line);font-size:16px;text-align:left}
+.opt:last-child{border-bottom:0}
+.radio{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--p-none);display:grid;place-items:center;flex:none}
+.opt[aria-checked="true"] .radio{border-color:var(--accent);background:var(--accent)}
+.opt[aria-checked="true"] .radio::after{content:"";width:8px;height:8px;border-radius:50%;background:var(--on-accent)}
+/* body */
+.bodywrap{display:flex;flex-direction:column;align-items:center;gap:8px;background:var(--surface);border-radius:16px;padding:12px}
+.bodywrap svg{width:100%;max-width:230px;height:auto}
+.region{fill:var(--surface-2);stroke:var(--line);stroke-width:1.5;cursor:pointer;transition:fill .12s}
+.region:hover{fill:var(--accent-soft)}
+.region.on{fill:var(--accent);stroke:var(--accent)}
+.side-lbl{fill:var(--muted);font:700 12px var(--body)}
+.arow{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line)}
+.arow:last-child{border-bottom:0}
+.arow .n{flex:1;font-weight:500}
+.tog{border:1.5px solid var(--line);background:var(--surface-2);border-radius:999px;padding:6px 13px;font-size:13.5px;font-weight:600;min-width:58px}
+.tog[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.addother{display:flex;gap:8px;padding:12px}
+.addother input{flex:1;min-width:0;border:1.5px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:12px;padding:10px 12px;font:inherit}
+.addother button{border:0;background:var(--accent);color:var(--on-accent);border-radius:12px;padding:0 16px;font-weight:700}
+.sel-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sel-chips button{border:0;background:var(--accent-soft);border-radius:999px;padding:6px 10px;font-size:13.5px}
+/* report */
+.ranges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.ranges button{border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-weight:600;font-size:13.5px}
+.ranges button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.stat{background:var(--surface);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow)}
+.stat b{display:block;font-family:var(--display);font-size:26px;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:12.5px;color:var(--muted)}
+.rsec{margin-top:18px}
+.rsec h3{font-size:16px;margin:0 4px 8px}
+.chart svg{width:100%;height:auto;display:block}
+.bars{display:flex;flex-direction:column;gap:8px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) 34px;gap:8px;align-items:center;font-size:14px}
+.bar .track{grid-column:1/-1;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden}
+.bar .track i{display:block;height:100%;background:var(--accent);border-radius:3px}
+.bar .c{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.rlist{display:flex;flex-direction:column}
+.ritem{padding:12px 0;border-bottom:1px solid var(--line);font-size:14px}
+.ritem:last-child{border-bottom:0}
+.ritem .h{display:flex;justify-content:space-between;gap:8px;font-weight:700}
+.ritem .h span{font-variant-numeric:tabular-nums}
+.ritem p{margin:3px 0 0;color:var(--muted);overflow-wrap:anywhere}
+.ritem p.notes{color:var(--ink);white-space:pre-wrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(86px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;font-weight:600;z-index:40}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Pain Diary</h1>
+    <div class="seg" role="group" aria-label="View">
+      <button id="tab-cal" aria-pressed="true">Calendar</button>
+      <button id="tab-rep" aria-pressed="false">Report</button>
+    </div>
+  </div>
+  <div class="statusbar" id="statusbar"><span id="savenote">Stored only on this iPhone</span><button class="textbtn" id="backupBtn">Backup</button></div>
+
+  <section id="view-cal">
+    <div class="card">
+      <div class="cal-head">
+        <h2 id="monthTitle">Month</h2>
+        <button class="textbtn" id="todayBtn">Today</button>
+        <button class="iconbtn" id="prevM" aria-label="Previous month"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <button class="iconbtn" id="nextM" aria-label="Next month"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></button>
+      </div>
+      <div class="grid" id="dows"></div>
+      <div class="grid" id="days" role="grid"></div>
+      <div class="legend">
+        <span><i style="background:var(--p-low)"></i>Pain 0–3</span>
+        <span><i style="background:var(--p-mid)"></i>4–6</span>
+        <span><i style="background:var(--p-high)"></i>7–10</span>
+        <span><i style="background:var(--p-none)"></i>No score</span>
+      </div>
+    </div>
+    <div class="dayhead"><h2 id="dayTitle">Today</h2><small id="dayCount"></small></div>
+    <div class="entries" id="entries"></div>
+  </section>
+
+  <section id="view-rep" hidden>
+    <div class="ranges" id="ranges"></div>
+    <div id="report"></div>
+  </section>
+</div>
+
+<div class="fabbar" id="fabbar"><button class="primary" id="addBtn">Log pain</button></div>
+<div id="sheetRoot"></div>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const keyOf=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseKey=k=>{const [y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d)};
+const nowTime=()=>{const d=new Date();return `${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const areaNoteLines=e=>(e.areas||[]).filter(a=>e.areaNotes?.[a]).map(a=>[a,e.areaNotes[a]]);
+const fmtLong=k=>parseKey(k).toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+const fmtShort=k=>parseKey(k).toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",year:"numeric"});
+const painColor=p=>p==null?"var(--p-none)":p<=3?"var(--p-low)":p<=6?"var(--p-mid)":"var(--p-high)";
+
+const DURATIONS=[["none","None"],["lt15","Under 15 min"],["15-30","15–30 min"],["30-60","30 min – 1 hr"],["1-2h","1–2 hrs"],["2h+","2+ hrs"]];
+const durLabel=k=>(DURATIONS.find(d=>d[0]===k)||[])[1]||"";
+const PAIN_WORDS=["No pain","Very mild","Mild","Mild","Moderate","Moderate","Moderate","Severe","Severe","Very severe","Worst pain imaginable"];
+
+const AREA_GROUPS=[
+  ["General",[["All over / widespread",0]]],
+  ["Head & neck",[["Head",0],["Jaw",0],["Neck",0]]],
+  ["Torso",[["Shoulder",1],["Chest",0],["Upper back",0],["Lower back",0],["Abdomen",0]]],
+  ["Arms",[["Upper arm",1],["Elbow",1],["Forearm",1],["Wrist",1],["Hand & fingers",1]]],
+  ["Hips & legs",[["Hip",1],["Buttock",1],["Thigh",1],["Back of thigh",1],["Knee",1],["Back of knee",1],["Shin",1],["Calf",1],["Ankle",1],["Foot",1]]]
+];
+const areaName=(n,side)=>side?`${n} (${side})`:n;
+
+/* body diagram geometry: [x,y,w,h,rx, frontName, backName, paired, which-side-on-screen-left] */
+const REG=[
+  [78,6,44,54,22,"Head","Head",0],
+  [89,60,22,16,6,"Neck","Neck",0],
+  [46,78,30,24,11,"Shoulder","Shoulder",1,"A"],[124,78,30,24,11,"Shoulder","Shoulder",1,"B"],
+  [77,78,46,44,8,"Chest","Upper back",0],
+  [79,124,42,40,8,"Abdomen","Lower back",0],
+  [77,166,22,26,7,"Hip","Buttock",1,"A"],[101,166,22,26,7,"Hip","Buttock",1,"B"],
+  [46,104,20,46,9,"Upper arm","Upper arm",1,"A"],[134,104,20,46,9,"Upper arm","Upper arm",1,"B"],
+  [46,152,20,14,7,"Elbow","Elbow",1,"A"],[134,152,20,14,7,"Elbow","Elbow",1,"B"],
+  [44,168,20,42,9,"Forearm","Forearm",1,"A"],[136,168,20,42,9,"Forearm","Forearm",1,"B"],
+  [41,212,24,28,11,"Hand & fingers","Hand & fingers",1,"A"],[135,212,24,28,11,"Hand & fingers","Hand & fingers",1,"B"],
+  [77,194,22,66,10,"Thigh","Back of thigh",1,"A"],[101,194,22,66,10,"Thigh","Back of thigh",1,"B"],
+  [78,262,20,20,9,"Knee","Back of knee",1,"A"],[102,262,20,20,9,"Knee","Back of knee",1,"B"],
+  [79,284,18,66,9,"Shin","Calf",1,"A"],[103,284,18,66,9,"Shin","Calf",1,"B"],
+  [74,352,24,18,8,"Foot","Ankle",1,"A"],[102,352,24,18,8,"Foot","Ankle",1,"B"]
+];
+// front view: person faces you, so screen-left (A) is their RIGHT. back view: screen-left is their LEFT.
+const sideFor=(pos,view)=>view==="front"?(pos==="A"?"right":"left"):(pos==="A"?"left":"right");
+
+/* ---------- storage: this device only, nothing is ever sent anywhere ---------- */
+let entries=[]; let mode="loading";
+const LS="pain-diary-entries-v1", LSB="pain-diary-last-backup";
+const DAY=86400000;
+function lsLoad(){try{const v=JSON.parse(localStorage.getItem(LS)||"[]");return Array.isArray(v)?v:[]}catch(e){return[]}}
+function lsSave(){try{localStorage.setItem(LS,JSON.stringify(entries));return true}catch(e){toast("Couldn't save. Your iPhone storage may be full.");return false}}
+async function saveEntry(e){
+  const prev=entries.slice(); const i=entries.findIndex(x=>x.id===e.id);
+  if(i>=0)entries[i]=e;else entries.push(e);
+  if(!lsSave()){entries=prev;return false}
+  render();return true;
+}
+async function deleteEntry(id){
+  const prev=entries.slice(); entries=entries.filter(x=>x.id!==id);
+  if(!lsSave()){entries=prev;return false}
+  render();return true;
+}
+function lastBackup(){try{return +localStorage.getItem(LSB)||0}catch(e){return 0}}
+function markBackup(){try{localStorage.setItem(LSB,String(Date.now()))}catch(e){}setNote()}
+function setNote(){
+  const lb=lastBackup(); const due=entries.length&&(!lb||Date.now()-lb>14*DAY);
+  $("#savenote").textContent=due?(lb?`Last backup ${Math.floor((Date.now()-lb)/DAY)} days ago`:"Not backed up yet"):"Stored only on this iPhone";
+  $("#statusbar").classList.toggle("due",!!due);
+  $("#backupBtn").textContent=due?"Back up now":"Backup";
+}
+function initStore(){
+  mode="local";entries=lsLoad();
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+  render();
+}
+
+/* ---------- backup ---------- */
+async function exportBackup(){
+  const data={app:"pain-diary",version:1,exportedAt:new Date().toISOString(),entries:sortEntries(entries)};
+  const name=`pain-diary-backup-${keyOf(new Date())}.json`;
+  const file=new File([JSON.stringify(data,null,2)],name,{type:"application/json"});
+  try{
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file]});markBackup();toast("Backup ready");return}
+  }catch(err){if(err&&err.name==="AbortError")return}
+  const url=URL.createObjectURL(file);const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);markBackup();toast("Backup downloaded");
+}
+const validEntry=e=>e&&typeof e==="object"&&typeof e.id==="string"&&e.id.length<80&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||"");
+function cleanEntry(e){
+  const pain=Number.isInteger(e.pain)&&e.pain>=0&&e.pain<=10?e.pain:null;
+  const areas=Array.isArray(e.areas)?e.areas.filter(a=>typeof a==="string").map(a=>a.slice(0,80)):[];
+  const notes={};if(e.areaNotes&&typeof e.areaNotes==="object")for(const a of areas)if(typeof e.areaNotes[a]==="string")notes[a]=e.areaNotes[a].slice(0,2000);
+  const dur=v=>DURATIONS.some(d=>d[0]===v)?v:null;
+  return{id:e.id,date:e.date,time:/^\d{2}:\d{2}$/.test(e.time||"")?e.time:"",pain,areas,areaNotes:notes,fatigue:dur(e.fatigue),stiffness:dur(e.stiffness),notes:typeof e.notes==="string"?e.notes.slice(0,5000):"",updatedAt:+e.updatedAt||0};
+}
+async function importBackup(file){
+  let data;
+  try{data=JSON.parse(await file.text())}catch(e){toast("That file isn't a Pain Diary backup.");return}
+  if(!data||data.app!=="pain-diary"||!Array.isArray(data.entries)){toast("That file isn't a Pain Diary backup.");return}
+  const byId=new Map(entries.map(e=>[e.id,e]));let added=0,updated=0;
+  for(const raw of data.entries){if(!validEntry(raw))continue;const e=cleanEntry(raw);const cur=byId.get(e.id);
+    if(!cur){byId.set(e.id,e);added++}else if((e.updatedAt||0)>(cur.updatedAt||0)){byId.set(e.id,e);updated++}}
+  const prev=entries;entries=[...byId.values()];
+  if(!lsSave()){entries=prev;return}
+  render();closeSheet();toast(added||updated?`Restored ${added} new, ${updated} updated`:"Nothing new in that backup");
+}
+function openBackup(){
+  openSheet(sh=>{
+    const lb=lastBackup();
+    sh.innerHTML=`<div class="sheet-head"><span style="width:52px"></span><h3>Backup</h3><button class="textbtn" data-a="done" style="padding-right:0">Done</button></div>
+    <div class="sheet-body">
+      <p style="margin:0">Your entries are stored only on this iPhone and are never sent anywhere. If you delete the app or lose your phone, they're gone, so save a backup regularly.</p>
+      <div class="group">
+        <div class="row"><span class="t">Entries</span><span class="v">${entries.length}</span></div>
+        <div class="row"><span class="t">Last backup</span><span class="v">${lb?new Date(lb).toLocaleDateString("en-GB",{day:"numeric",month:"short",year:"numeric"}):"Never"}</span></div>
+      </div>
+      <button class="primary" data-a="export" ${entries.length?"":"disabled"}>Export backup</button>
+      <p class="note" style="margin:-8px 4px 0">Choose “Save to Files”, then iCloud Drive or On My iPhone. Keep backup files private. They contain your pain logs.</p>
+      <button class="ghost" data-a="import">Restore from a backup file</button>
+      <p class="note" style="margin:-8px 4px 0">Restoring adds entries from the file. It never deletes what's already here.</p>
+      <input type="file" id="f-import" accept=".json,application/json" hidden>
+    </div>`;
+    const inp=sh.querySelector("#f-import");
+    inp.addEventListener("change",()=>{if(inp.files[0])importBackup(inp.files[0]);inp.value=""});
+    sh.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b)return;
+      if(b.dataset.a==="export")exportBackup();else if(b.dataset.a==="import")inp.click();else closeSheet()});
+  });
+}
+
+/* ---------- state ---------- */
+const today=keyOf(new Date());
+let selected=today; let viewMonth=new Date(); viewMonth.setDate(1);
+let tab="cal"; let range="30";
+
+function byDay(){const m={};for(const e of entries){(m[e.date]=m[e.date]||[]).push(e)}return m}
+const sortEntries=a=>[...a].sort((x,y)=>(x.date+(x.time||"")).localeCompare(y.date+(y.time||"")));
+
+/* ---------- calendar ---------- */
+const DOW=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+$("#dows").innerHTML=DOW.map(d=>`<div class="dow">${d}</div>`).join("");
+function renderCal(){
+  $("#monthTitle").textContent=viewMonth.toLocaleDateString("en-GB",{month:"long",year:"numeric"});
+  const map=byDay();
+  const first=new Date(viewMonth); const off=(first.getDay()+6)%7;
+  const start=new Date(first); start.setDate(1-off);
+  let html="";
+  for(let i=0;i<42;i++){
+    const d=new Date(start);d.setDate(start.getDate()+i);
+    if(i===35&&d.getMonth()!==viewMonth.getMonth())break;
+    const k=keyOf(d); const list=map[k]||[];
+    const scores=list.map(e=>e.pain).filter(p=>p!=null);
+    const mx=scores.length?Math.max(...scores):null;
+    const cls=["day",d.getMonth()!==viewMonth.getMonth()?"out":"",k===today?"today":""].join(" ");
+    html+=`<button class="${cls}" data-k="${k}" aria-selected="${k===selected}" aria-label="${fmtLong(k)}${list.length?`, ${list.length} entr${list.length>1?"ies":"y"}`:""}"><span class="n">${d.getDate()}</span><span class="dot" style="background:${list.length?painColor(mx):"transparent"}"></span></button>`;
+  }
+  $("#days").innerHTML=html;
+}
+$("#days").addEventListener("click",e=>{const b=e.target.closest(".day");if(!b)return;selected=b.dataset.k;const d=parseKey(selected);if(d.getMonth()!==viewMonth.getMonth()){viewMonth=new Date(d.getFullYear(),d.getMonth(),1)}render()});
+$("#prevM").onclick=()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()-1,1);renderCal()};
+$("#nextM").onclick=()=>{viewMonth=new Date(viewMonth.getFullYear(),viewMonth.getMonth()+1,1);renderCal()};
+$("#todayBtn").onclick=()=>{selected=today;viewMonth=new Date();viewMonth.setDate(1);render()};
+
+function entryLines(e){
+  const bits=[];
+  if(e.stiffness&&e.stiffness!=="none")bits.push(`Stiffness ${durLabel(e.stiffness)}`);
+  if(e.fatigue&&e.fatigue!=="none")bits.push(`Fatigue ${durLabel(e.fatigue)}`);
+  return bits;
+}
+function renderDay(){
+  $("#dayTitle").textContent=selected===today?"Today":fmtLong(selected);
+  const list=sortEntries(byDay()[selected]||[]);
+  $("#dayCount").textContent=list.length?`${list.length} entr${list.length>1?"ies":"y"}`:"";
+  if(mode==="loading"){$("#entries").innerHTML=`<div class="empty">Loading your entries…</div>`;return}
+  if(!list.length){$("#entries").innerHTML=`<div class="empty"><b>Nothing logged ${selected===today?"today":"on this day"}</b>Tap “Log pain” to record where it hurts, how bad it is, and any stiffness or fatigue.</div>`;return}
+  $("#entries").innerHTML=list.map(e=>`<button class="entry" data-id="${esc(e.id)}">
+    <div class="score ${e.pain==null?"na":""}" style="${e.pain!=null?`background:${painColor(e.pain)}`:""}">${e.pain==null?"–":e.pain}</div>
+    <div class="meta"><div class="time">${[e.time?esc(e.time):"",e.pain!=null?`<span style="font-weight:500">${PAIN_WORDS[e.pain]}</span>`:""].filter(Boolean).join(" · ")||"Entry"}</div>
+    ${e.areas?.length?`<div class="chips">${e.areas.map(a=>`<span class="chip">${esc(a)}</span>`).join("")}</div>`:""}
+    ${areaNoteLines(e).map(([a,n])=>`<div class="line" style="margin-top:4px"><b style="color:var(--ink);font-weight:600">${esc(a)}:</b> ${esc(n.length>90?n.slice(0,90)+"…":n)}</div>`).join("")}
+    ${entryLines(e).length?`<div class="line" style="margin-top:5px">${entryLines(e).join(" · ")}</div>`:""}
+    ${e.notes?`<div class="line" style="margin-top:4px">${esc(e.notes.length>120?e.notes.slice(0,120)+"…":e.notes)}</div>`:""}</div></button>`).join("");
+}
+$("#entries").addEventListener("click",ev=>{const b=ev.target.closest(".entry");if(!b)return;const e=entries.find(x=>x.id===b.dataset.id);if(e)openEntry(e)});
+
+/* ---------- report ---------- */
+const RANGES=[["7","Last 7 days"],["30","Last 30 days"],["90","Last 3 months"],["all","All"]];
+function renderRanges(){$("#ranges").innerHTML=RANGES.map(([k,l])=>`<button data-r="${k}" aria-pressed="${range===k}">${l}</button>`).join("")}
+$("#ranges").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;range=b.dataset.r;renderReport()});
+function renderReport(){
+  renderRanges();
+  let startKey="0000-00-00";
+  if(range!=="all"){const d=new Date();d.setDate(d.getDate()-(+range-1));startKey=keyOf(d)}
+  const list=sortEntries(entries.filter(e=>e.date>=startKey&&e.date<=today));
+  if(!list.length){$("#report").innerHTML=`<div class="empty"><b>No entries in this period</b>Entries you log will be summarised here, ready to show a GP or physio.</div>`;return}
+  const scores=list.map(e=>e.pain).filter(p=>p!=null);
+  const avg=scores.length?(scores.reduce((a,b)=>a+b,0)/scores.length):null;
+  const days=new Set(list.map(e=>e.date));
+  const areaCount={};list.forEach(e=>(e.areas||[]).forEach(a=>areaCount[a]=(areaCount[a]||0)+1));
+  const topAreas=Object.entries(areaCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxA=topAreas.length?topAreas[0][1]:1;
+  const durCount=f=>DURATIONS.map(([k,l])=>[l,list.filter(e=>e[f]===k).length]).filter(x=>x[1]);
+  const first=range==="all"?list[0].date:startKey;
+  let html=`<p class="note" style="margin:0 4px 10px">${fmtShort(first)} – ${fmtShort(today)}</p>
+  <div class="stats">
+    <div class="stat"><b>${list.length}</b><span>Entries logged</span></div>
+    <div class="stat"><b>${days.size}</b><span>Days with entries</span></div>
+    <div class="stat"><b>${avg==null?"–":avg.toFixed(1)}</b><span>Average pain (0–10)</span></div>
+    <div class="stat"><b>${scores.length?Math.max(...scores):"–"}</b><span>Highest pain (0–10)</span></div>
+  </div>`;
+  html+=`<div class="rsec"><h3>Highest pain each day</h3><div class="card chart">${chartSVG(list,first)}</div></div>`;
+  if(topAreas.length)html+=`<div class="rsec"><h3>Most affected areas</h3><div class="card bars">${topAreas.map(([a,c])=>`<div class="bar"><span>${esc(a)}</span><span class="c">${c}×</span><div class="track"><i style="width:${c/maxA*100}%"></i></div></div>`).join("")}</div></div>`;
+  for(const [f,t] of [["stiffness","Stiffness duration"],["fatigue","Fatigue duration"]]){
+    const dc=durCount(f); if(!dc.length)continue; const m=Math.max(...dc.map(x=>x[1]));
+    html+=`<div class="rsec"><h3>${t}</h3><div class="card bars">${dc.map(([l,c])=>`<div class="bar"><span>${l}</span><span class="c">${c}×</span><div class="track"><i style="width:${c/m*100}%"></i></div></div>`).join("")}</div></div>`;
+  }
+  html+=`<div class="rsec"><h3>All entries</h3><div class="card rlist">${[...list].reverse().map(e=>`<div class="ritem"><div class="h"><span>${fmtShort(e.date)}${e.time?" · "+esc(e.time):""}</span><span style="color:${painColor(e.pain)}">${e.pain==null?"No score":"Pain "+e.pain+"/10"}</span></div>
+    ${e.areas?.length?`<p>${e.areas.map(esc).join(", ")}</p>`:""}
+    ${areaNoteLines(e).map(([a,n])=>`<p class="notes"><b>${esc(a)}:</b> ${esc(n)}</p>`).join("")}
+    ${entryLines(e).length?`<p>${entryLines(e).join(" · ")}</p>`:""}
+    ${e.notes?`<p class="notes">${esc(e.notes)}</p>`:""}</div>`).join("")}</div></div>`;
+  $("#report").innerHTML=html;
+}
+function chartSVG(list,firstKey){
+  const days=[];const d=parseKey(firstKey);const end=parseKey(today);
+  while(d<=end){days.push(keyOf(d));d.setDate(d.getDate()+1)}
+  const mx={};list.forEach(e=>{if(e.pain!=null)mx[e.date]=Math.max(mx[e.date]??-1,e.pain)});
+  const W=340,H=150,L=24,R=6,T=8,B=22,cw=(W-L-R)/days.length,ch=H-T-B;
+  const y=v=>T+ch-(v/10)*ch;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Highest pain score per day">`;
+  for(const v of [0,5,10]){s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="system-ui,-apple-system,sans-serif">${v}</text>`}
+  days.forEach((k,i)=>{if(mx[k]==null)return;const bw=Math.max(2,cw*.7),x=L+i*cw+(cw-bw)/2,h=Math.max(2,(mx[k]/10)*ch);s+=`<rect x="${x.toFixed(1)}" y="${(T+ch-h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(3,bw/2)}" fill="${painColor(mx[k])}"><title>${fmtShort(k)}: ${mx[k]}/10</title></rect>`});
+  const lab=k=>parseKey(k).toLocaleDateString("en-GB",{day:"numeric",month:"short"});
+  s+=`<text x="${L}" y="${H-6}" font-size="10" fill="var(--muted)" font-family="system-ui,-apple-system,sans-serif">${lab(days[0])}</text><text x="${W-R}" y="${H-6}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="system-ui,-apple-system,sans-serif">${lab(days[days.length-1])}</text>`;
+  return s+"</svg>";
+}
+
+/* ---------- sheets ---------- */
+const stack=[];
+function openSheet(build){
+  const scrim=document.createElement("div");scrim.className="scrim";
+  scrim.innerHTML=`<div class="sheet" role="dialog" aria-modal="true"></div>`;
+  $("#sheetRoot").appendChild(scrim);stack.push(scrim);
+  scrim.addEventListener("click",e=>{if(e.target===scrim)closeSheet()});
+  build(scrim.firstElementChild);
+  document.body.style.overflow="hidden";
+}
+function closeSheet(){const s=stack.pop();s&&s.remove();if(!stack.length)document.body.style.overflow=""}
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&stack.length)closeSheet()});
+
+function openEntry(existing){
+  const e=existing?JSON.parse(JSON.stringify(existing)):{id:"e"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),date:selected,time:"",pain:null,areas:[],areaNotes:{},fatigue:null,stiffness:null,notes:""};
+  e.areaNotes=e.areaNotes||{}; e.time=e.time||"";
+  let confirmDel=false;
+  openSheet(sh=>{
+    const draw=()=>{
+      sh.innerHTML=`<div class="sheet-head"><button class="textbtn" data-a="cancel" style="padding-left:0">Cancel</button><h3>${existing?"Edit entry":"Log pain"}</h3><span style="width:52px"></span></div>
+      <div class="sheet-body">
+        <div><div class="label">When</div><div class="group">
+          <label class="row"><span class="t">Date</span><input type="date" id="f-date" value="${e.date}" max="${today}"></label>
+          <div class="row"><span class="t">Time <span style="color:var(--muted);font-weight:400">(optional)</span></span>${e.time?
+            `<input type="time" id="f-time" value="${e.time}" aria-label="Time"><button class="textbtn" data-a="notime" style="padding-right:0">Remove</button>`:
+            `<button class="textbtn" data-a="addtime" style="padding-right:0">+ Add time</button>`}</div></div></div>
+        <div><div class="label">Pain score</div><div class="group">
+          <div class="painpad">${Array.from({length:11},(_,i)=>`<button data-p="${i}" aria-pressed="${e.pain===i}" style="${e.pain===i?`background:${painColor(i)}`:""}">${i}</button>`).join("")}</div>
+          <div class="paindesc">${e.pain==null?"0 = no pain, 10 = worst pain imaginable":`${e.pain} – ${PAIN_WORDS[e.pain]}`}</div></div></div>
+        <div><div class="label">Details</div><div class="group">
+          <button class="row" data-a="areas"><span class="t">Where it hurts</span><span class="v">${e.areas.length?esc(e.areas.join(", ")):""}</span><span class="plus">${e.areas.length?"›":"+"}</span></button>
+          <button class="row" data-a="stiffness"><span class="t">Stiffness</span><span class="v">${e.stiffness?durLabel(e.stiffness):""}</span><span class="plus">${e.stiffness?"›":"+"}</span></button>
+          <button class="row" data-a="fatigue"><span class="t">Fatigue</span><span class="v">${e.fatigue?durLabel(e.fatigue):""}</span><span class="plus">${e.fatigue?"›":"+"}</span></button>
+        </div></div>
+        ${e.areas.length?`<div><div class="label">Comments on each area</div><div class="group">${e.areas.map((a,i)=>`<button class="row" data-an="${i}"><span class="t">${esc(a)}</span><span class="v">${e.areaNotes[a]?esc(e.areaNotes[a]):"Add comment"}</span><span class="plus">${e.areaNotes[a]?"›":"+"}</span></button>`).join("")}</div></div>`:""}
+        <div><div class="label">Notes</div><textarea id="f-notes" placeholder="What were you doing? What helped or made it worse? Medication taken?">${esc(e.notes)}</textarea></div>
+      </div>
+      <div class="sheet-foot">${existing?`<button class="ghost danger" data-a="del">${confirmDel?"Tap again to delete":"Delete"}</button>`:""}<button class="primary" data-a="save">Save entry</button></div>`;
+    };
+    const sync=()=>{const d=sh.querySelector("#f-date"),t=sh.querySelector("#f-time"),n=sh.querySelector("#f-notes");if(d&&d.value)e.date=d.value;if(t)e.time=t.value||"";if(n)e.notes=n.value};
+    draw();
+    sh.addEventListener("click",async ev=>{
+      const p=ev.target.closest("[data-p]"); if(p){sync();e.pain=e.pain===+p.dataset.p?null:+p.dataset.p;draw();return}
+      const an=ev.target.closest("[data-an]"); if(an){sync();const area=e.areas[+an.dataset.an];openAreaNote(area,e.areaNotes[area]||"",v=>{if(v.trim())e.areaNotes[area]=v.trim();else delete e.areaNotes[area];draw()});return}
+      const b=ev.target.closest("[data-a]"); if(!b)return; const a=b.dataset.a; sync();
+      if(a==="cancel")closeSheet();
+      else if(a==="addtime"){e.time=nowTime();draw();sh.querySelector("#f-time")?.focus()}
+      else if(a==="notime"){e.time="";draw()}
+      else if(a==="areas")openAreas(e.areas,v=>{e.areas=v;for(const k of Object.keys(e.areaNotes))if(!v.includes(k))delete e.areaNotes[k];draw()});
+      else if(a==="stiffness")openDuration("Stiffness","How long did the stiffness last?",e.stiffness,v=>{e.stiffness=v;draw()});
+      else if(a==="fatigue")openDuration("Fatigue","How long did the fatigue last?",e.fatigue,v=>{e.fatigue=v;draw()});
+      else if(a==="del"){if(!confirmDel){confirmDel=true;draw();return}if(await deleteEntry(e.id)){closeSheet();toast("Entry deleted")}}
+      else if(a==="save"){
+        if(e.pain==null&&!e.areas.length&&!e.notes.trim()&&!e.fatigue&&!e.stiffness){toast("Add a pain score, area or note first");return}
+        b.disabled=true; const ok=await saveEntry({...e,updatedAt:Date.now()}); b.disabled=false;
+        if(ok){selected=e.date;const d=parseKey(e.date);viewMonth=new Date(d.getFullYear(),d.getMonth(),1);render();closeSheet();toast(existing?"Entry updated":"Entry saved")}
+      }
+    });
+  });
+}
+
+function openAreaNote(area,cur,done){
+  openSheet(sh=>{
+    sh.innerHTML=`<div class="sheet-head"><button class="textbtn" data-a="cancel" style="padding-left:0">Cancel</button><h3>${esc(area)}</h3><button class="textbtn" data-a="done" style="padding-right:0">Done</button></div>
+    <div class="sheet-body"><div><div class="label">Comments on this area</div>
+    <textarea id="f-areanote" placeholder="e.g. sharp when walking, throbbing at night, swollen, tingling">${esc(cur)}</textarea></div></div>`;
+    const ta=sh.querySelector("#f-areanote"); setTimeout(()=>ta.focus(),50);
+    sh.addEventListener("click",ev=>{const b=ev.target.closest("[data-a]");if(!b)return;if(b.dataset.a==="done")done(ta.value);closeSheet()});
+  });
+}
+
+function openDuration(title,q,cur,done){
+  let v=cur;
+  openSheet(sh=>{
+    const draw=()=>{sh.innerHTML=`<div class="sheet-head"><span style="width:52px"></span><h3>${title}</h3><button class="textbtn" data-a="done" style="padding-right:0">Done</button></div>
+      <div class="sheet-body"><div><div class="label">${q}</div><div class="group" role="radiogroup">${DURATIONS.map(([k,l])=>`<button class="opt" role="radio" data-k="${k}" aria-checked="${v===k}">${l}<span class="radio"></span></button>`).join("")}</div></div>
+      ${v?`<button class="textbtn" data-a="clear" style="align-self:flex-start">Clear</button>`:""}</div>`};
+    draw();
+    sh.addEventListener("click",ev=>{const o=ev.target.closest("[data-k]");if(o){v=o.dataset.k;draw();return}
+      const b=ev.target.closest("[data-a]");if(!b)return;if(b.dataset.a==="clear"){v=null;draw();return}done(v);closeSheet()});
+  });
+}
+
+function openAreas(cur,done){
+  const sel=new Set(cur); let view="front";
+  const toggle=n=>{sel.has(n)?sel.delete(n):sel.add(n)};
+  openSheet(sh=>{
+    const bodySVG=()=>{
+      let s=`<svg viewBox="30 0 140 382" aria-label="Body diagram, ${view} view">`;
+      REG.forEach(([x,y,w,h,rx,fn,bn,paired,pos],i)=>{
+        const base=view==="front"?fn:bn; const n=paired?areaName(base,sideFor(pos,view)):base;
+        s+=`<rect class="region ${sel.has(n)?"on":""}" data-n="${esc(n)}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" tabindex="0" role="button" aria-pressed="${sel.has(n)}" aria-label="${esc(n)}"><title>${esc(n)}</title></rect>`;
+      });
+      const lft=view==="front"?"R":"L",rgt=view==="front"?"L":"R";
+      s+=`<text class="side-lbl" x="36" y="74">${lft}</text><text class="side-lbl" x="158" y="74">${rgt}</text></svg>`;
+      return s;
+    };
+    const draw=()=>{
+      const scroll=sh.querySelector(".sheet-body")?.scrollTop||0;
+      const custom=[...sel].filter(n=>!AREA_GROUPS.some(([,items])=>items.some(([b,p])=>p?(n===areaName(b,"left")||n===areaName(b,"right")):n===b)));
+      sh.innerHTML=`<div class="sheet-head"><span style="width:52px"></span><h3>Where it hurts</h3><button class="textbtn" data-a="done" style="padding-right:0">Done</button></div>
+      <div class="sheet-body">
+        ${sel.size?`<div><div class="label">Selected · tap to remove</div><div class="sel-chips">${[...sel].map(n=>`<button data-rm="${esc(n)}">${esc(n)} ✕</button>`).join("")}</div></div>`:""}
+        <div><div class="label">Tap the body</div><div class="bodywrap">
+          <div class="seg" role="group" aria-label="Body side"><button data-v="front" aria-pressed="${view==="front"}">Front</button><button data-v="back" aria-pressed="${view==="back"}">Back</button></div>
+          ${bodySVG()}
+          <div class="note" style="margin:0;text-align:center">${view==="front"?"Front view: facing you, so your right side is on the left":"Back view: your left side is on the left"}</div>
+        </div></div>
+        ${AREA_GROUPS.map(([g,items])=>`<div><div class="label">${g}</div><div class="group">${items.map(([b,p])=>`<div class="arow"><span class="n">${b}</span>${p?
+          `<button class="tog" data-n="${esc(areaName(b,"left"))}" aria-pressed="${sel.has(areaName(b,"left"))}">Left</button><button class="tog" data-n="${esc(areaName(b,"right"))}" aria-pressed="${sel.has(areaName(b,"right"))}">Right</button>`:
+          `<button class="tog" data-n="${esc(b)}" aria-pressed="${sel.has(b)}">${sel.has(b)?"Added":"Add"}</button>`}</div>`).join("")}</div></div>`).join("")}
+        <div><div class="label">Somewhere else</div><div class="group"><div class="addother"><input id="f-other" placeholder="e.g. Left side of ribs" maxlength="60"><button data-a="other">Add</button></div></div></div>
+      </div>`;
+      sh.querySelector(".sheet-body").scrollTop=scroll;
+    };
+    draw();
+    sh.addEventListener("click",ev=>{
+      const v=ev.target.closest("[data-v]");if(v){view=v.dataset.v;draw();return}
+      const r=ev.target.closest("[data-rm]");if(r){sel.delete(r.dataset.rm);draw();return}
+      const n=ev.target.closest("[data-n]");if(n){toggle(n.dataset.n);draw();return}
+      const b=ev.target.closest("[data-a]");if(!b)return;
+      if(b.dataset.a==="other"){const i=sh.querySelector("#f-other");const t=i.value.trim();if(t){sel.add(t[0].toUpperCase()+t.slice(1));draw()}return}
+      done([...sel]);closeSheet();
+    });
+    sh.addEventListener("keydown",ev=>{
+      if(ev.key==="Enter"&&ev.target.id==="f-other"){ev.preventDefault();sh.querySelector('[data-a="other"]').click()}
+      else if((ev.key==="Enter"||ev.key===" ")&&ev.target.classList?.contains("region")){ev.preventDefault();toggle(ev.target.dataset.n);draw()}
+    });
+  });
+}
+
+/* ---------- misc ---------- */
+let tt;function toast(m){document.querySelector(".toast")?.remove();const t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);clearTimeout(tt);tt=setTimeout(()=>t.remove(),2200)}
+function setTab(t){tab=t;$("#tab-cal").setAttribute("aria-pressed",t==="cal");$("#tab-rep").setAttribute("aria-pressed",t==="rep");$("#view-cal").hidden=t!=="cal";$("#view-rep").hidden=t!=="rep";render()}
+$("#tab-cal").onclick=()=>setTab("cal");$("#tab-rep").onclick=()=>setTab("rep");
+$("#addBtn").onclick=()=>openEntry(null);
+function render(){setNote();if(tab==="cal"){renderCal();renderDay()}else renderReport()}
+$("#backupBtn").onclick=openBackup;
+initStore();
+if("serviceWorker" in navigator&&location.protocol==="https:"){navigator.serviceWorker.register("sw.js").catch(()=>{})}
+})();
+</script>
+</body>
+</html>
