@@ -14,4 +14,4 @@ Offline web app hosted on GitHub Pages. This repository is PUBLIC.
 - `manifest.webmanifest`, `icons/`: Home Screen install
 
 ## Versioning
-On every update, bump `APP_VERSION` in `index.html` (shown at the bottom of the screen) and set `CACHE` in `sw.js` to `pain-diary-v<same version>`. History: 1.0 first release, 1.1 report area filter, 1.2 version label.
+On every update, bump `APP_VERSION` in `index.html` (shown at the bottom of the screen) and set `CACHE` in `sw.js` to `pain-diary-v<same version>`. History: 1.0 first release, 1.1 report area filter, 1.2 version label, 1.3 updates bypass browser cache.
