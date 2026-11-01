@@ -20,7 +20,7 @@ for f in $files; do
   case "$f" in *.png) continue;; esac
   [ -f "$f" ] || continue
   # Backup / entry data is JSON with quoted keys; the app code never uses quoted keys like these.
-  grep -nE '"(exportedAt|areaNotes|stiffness|fatigue|entries)"[[:space:]]*:' "$f" >/dev/null && bad "'$f' looks like it contains logged entries or a backup"
+  grep -nE '"(exportedAt|areaNotes|areaScores|stiffness|fatigue|entries)"[[:space:]]*:' "$f" >/dev/null && bad "'$f' looks like it contains logged entries or a backup"
   grep -nE '"date"[[:space:]]*:[[:space:]]*"[0-9]{4}-[0-9]{2}-[0-9]{2}"' "$f" >/dev/null && bad "'$f' contains dated entry data"
   grep -nE '"app"[[:space:]]*:[[:space:]]*"pain-diary"' "$f" >/dev/null && bad "'$f' contains a Pain Diary backup"
   # Email addresses and phone numbers
